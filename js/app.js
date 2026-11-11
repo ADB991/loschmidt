@@ -58,7 +58,7 @@
   const SIZES = { 1: [96, 144, 192, 288, 384, 480, 576, 768, 960], 2: [64, 96, 128, 160, 192, 256, 320, 384, 512, 768, 1024] };
 
   function makeUniverse(dim) {
-    const preset = PRESETS.find((p) => p.id === (dim === 1 ? 'rca54' : 'critters'));
+    const preset = PRESETS.find((p) => p.id === (dim === 1 ? 'rca54' : 'hpp'));
     return {
       dim, size: dim === 1 ? 288 : 128,
       presetId: preset.id, family: preset.family, params: JSON.parse(JSON.stringify(preset.params)),
@@ -1492,7 +1492,7 @@
     let saved = 'paper';
     try { saved = localStorage.getItem('loschmidt.theme.v2') || 'paper'; } catch (e) { /* no storage: default theme */ }
     applyTheme(saved);
-    setDim(1);
+    setDim(2);
     requestAnimationFrame(frame);
   }
   boot();
