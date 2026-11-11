@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loschmidt · reversible cellular automata</title>
+<meta name="description" content="An explorer for reversible binary cellular automata in 1D and 2D: thermalisation, ergodicity, recurrence and the Loschmidt echo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="21" y="3" width="8" height="8" rx="1.5" class="dim"/><rect x="12" y="12" width="8" height="8" rx="1.5"/><rect x="3" y="21" width="8" height="8" rx="1.5" class="dim"/><rect x="21" y="21" width="8" height="8" rx="1.5"/></svg>
+    <div><div class="title">Loschmidt</div><div class="subtitle">reversible cellular automata</div></div>
+  </div>
+  <nav class="dimtabs" role="tablist">
+    <button data-dim="1" role="tab">1D <span>space-time</span></button>
+    <button data-dim="2" role="tab">2D <span>video</span></button>
+  </nav>
+  <div class="hdr-right">
+    <div id="themes" title="Colour scheme"><span class="lbl">colours</span></div>
+    <button id="helpBtn" class="ghost" title="Guide and keyboard shortcuts (?)">Guide</button>
+  </div>
+</header>
+
+<main id="layout">
+  <!-- ============================== left: rule, board, initial state -->
+  <aside id="left" class="panel">
+    <section>
+      <h2>Rule</h2>
+      <select id="ruleSel"></select>
+      <div id="ruleCard" class="card"></div>
+      <details id="paramBox" class="params">
+        <summary>Parameters <span class="muted" id="paramHint"></span></summary>
+        <div id="paramBody"></div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Board <span class="muted small">periodic (torus)</span></h2>
+      <div class="row">
+        <label for="sizeSel" id="sizeLbl">Width</label>
+        <select id="sizeSel"></select>
+      </div>
+    </section>
+
+    <section>
+      <h2>Initial state <span class="muted small">at t = 0</span></h2>
+      <div class="row"><label for="patSel">Pattern</label><select id="patSel"></select></div>
+      <div class="row" id="densRow"><label for="dens">Density <b id="densVal">0.50</b></label><input id="dens" type="range" min="0.01" max="0.99" step="0.01" value="0.5"></div>
+      <div class="row" id="textRow"><label for="txt">Text</label><input id="txt" type="text" maxlength="40" value="hi"></div>
+      <div class="row" id="pastRow"><label for="pastSel" title="Second-order rules need two time slices">Slice t = −1</label>
+        <select id="pastSel"><option value="empty">empty</option><option value="same">same as t = 0</option><option value="random">random</option></select></div>
+      <div class="btnrow">
+        <button id="prepBtn" class="primary">Set t = 0 to this pattern</button>
+      </div>
+      <p class="hint" id="initHint"></p>
+    </section>
+  </aside>
+
+  <!-- ============================== centre: canvas + transport -->
+  <div id="center">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="hover" class="hoverbox"></div>
+    </div>
+    <div id="transport">
+      <div class="tgroup">
+        <button id="tZero" class="icon" title="Jump to t = 0 (Home)">⏮</button>
+        <button id="tRun0" class="icon wide" title="Run to t = 0 at high speed (Z)">⏪ 0</button>
+        <button id="tBack" class="icon" title="Play backwards (Shift+Space)">◀</button>
+        <button id="tStepB" class="icon" title="Step back (←)">❮</button>
+        <button id="tPause" class="icon" title="Pause (Space)">❚❚</button>
+        <button id="tStepF" class="icon" title="Step forward (→)">❯</button>
+        <button id="tFwd" class="icon" title="Play forwards (Space)">▶</button>
+      </div>
+      <div class="tclock"><span class="tlabel">t =</span><input id="tInput" type="text" inputmode="numeric" value="0" title="Type a time and press Enter"></div>
+      <div id="hud"></div>
+      <div class="tgroup speed" title="Steps per second ([ and ] to change)">
+        <span>speed</span>
+        <div class="seg" id="speedBtns"></div>
+        <span id="speedVal" class="mono"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== right: tools, measures, experiments -->
+  <aside id="right" class="panel">
+    <section>
+      <h2>Interact</h2>
+      <div class="seg" id="toolSeg">
+        <button data-tool="toggle" title="Click toggles a cell; drag paints along a time slice">✎ toggle</button>
+        <button data-tool="probe" title="Click places an ergodicity probe (also ⌥/Alt-click)">⌖ probe</button>
+      </div>
+      <div class="toolbar">
+        <button id="lcBtn" class="toggle lcb" title="Light cone (L): shade every cell the last toggle could influence, its causal future and past. While it is on, each toggle is compared with the history just before it, and in 1D hovering previews the next one.">◎ Light cone</button>
+        <button id="dmgBtn" class="toggle dmb" title="Damage (D): colour the cells that differ from the reference history">◐ Damage</button>
+        <button id="pinBtn" title="Freeze the current history as the reference (P)">Pin reference</button>
+        <button id="clrBtn" title="Forget the reference (X)">Clear</button>
+      </div>
+      <div class="toolbar" id="dualRow">
+        <label class="chk" title="This rule maps N live cells to WH − N each step. Showing odd frames complemented makes N conserved."><input type="checkbox" id="dualChk" checked> complement odd frames (dual view)</label>
+      </div>
+      <div class="toolbar" id="viewRow2d">
+        <label class="chk"><input type="checkbox" id="partChk"> show partition</label>
+        <label class="chk"><input type="checkbox" id="avgChk"> show time averages</label>
+      </div>
+      <div class="toolbar" id="viewRow1d">
+        <label class="chk"><input type="checkbox" id="upChk" checked> future upwards</label>
+        <label class="chk" title="After an edit, the new history spreads outwards from the edited row at the play speed, instead of appearing at once"><input type="checkbox" id="animChk" checked> unfold changes in time</label>
+      </div>
+      <div id="refStatus" class="hint"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section>
+      <h2>Typicality <span class="muted small" id="measT"></span></h2>
+      <table class="meas" id="measTable"></table>
+      <canvas id="chart" class="chart"></canvas>
+      <p class="hint" id="measHint"></p>
+    </section>
+
+    <section>
+      <h2>Ergodicity</h2>
+      <p class="hint">Time average of each cell over <span id="ergoWin" class="mono"></span>, set against the space average now.</p>
+      <div class="btnrow"><button id="ergoReset">Start averaging now</button><button id="probeClr">Clear probes</button></div>
+      <table class="meas" id="ergoTable"></table>
+      <canvas id="hist" class="chart small"></canvas>
+      <div id="probeList" class="probes"></div>
+    </section>
+
+    <section>
+      <h2>Loschmidt echo</h2>
+      <ol class="echo">
+        <li><span>Encode</span><button id="e1">Set t = 0 to the pattern</button></li>
+        <li><span>Scramble</span><input id="eT" type="number" min="1" value="300"><button id="e2">Run to t = T</button></li>
+        <li><span>Perturb</span><input id="eK" type="number" min="1" value="1"><select id="eMode" style="width:auto" title="Nudging moves a particle into an empty neighbouring cell, so particle number and the conserved sector stay the same"><option value="flip">flip cells</option><option value="nudge">nudge particles</option></select><button id="e3">Go</button></li>
+        <li><span>Unscramble</span><button id="e4">Run back to t = 0</button></li>
+      </ol>
+      <p class="hint">At step 3 you can also click cells yourself; the echo records them as the perturbation.</p>
+      <div id="echoOut" class="echoout"></div>
+      <div class="toolbar">
+        <button class="toggle lcb" title="Light cone (L): shade the area the perturbation could influence">◎ Light cone</button>
+        <button class="toggle dmb" title="Damage (D): colour the cells that differ from the encoded history. Turn both off to see the plain pattern.">◐ Damage</button>
+        <button id="e5" title="Make the reference history current again">Undo the perturbation</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recurrence</h2>
+      <div id="recOut" class="hint"></div>
+    </section>
+  </aside>
+</main>
+
+<div id="help" class="modal" hidden>
+  <div class="sheet">
+    <button class="close" id="helpClose" aria-label="Close">×</button>
+    <h1>Loschmidt</h1>
+    <p>Every rule here is a bijection on configurations, so one time slice fixes the whole history, past and future. The board is a torus. Click a cell anywhere in space-time and the history is rewritten in both directions.</p>
+    <h3>What to try</h3>
+    <ul>
+      <li><b>Thermalisation.</b> Start from a low-entropy pattern and watch the coarse-grained entropy climb to its typical value. Entropy grows in both time directions away from t = 0. Start from a random state and nothing visible happens.</li>
+      <li><b>Typicality depends on the rule.</b> Particle-conserving rules thermalise at fixed density. Q2R conserves the Ising energy, so its equilibrium keeps a fixed density of domain walls. Free and integrable rules (swap gas, diagonal gas, RCA54, box-ball) never reach the iid values.</li>
+      <li><b>Ergodicity.</b> Compare a cell's time average with the space average now. Probes (⌖) follow single cells; the histogram shows every cell's time average. For a mixing rule the spread shrinks like 1/√T.</li>
+      <li><b>Loschmidt echo.</b> Encode a pattern, scramble it forwards, flip one cell, run back. The damage at t = 0 is the backward light cone of the flip: small after a short scramble, everywhere after a long one. In linear rules it is a sparse fractal, so the pattern survives.</li>
+      <li><b>Light cone and damage.</b> ◎ Light cone shades the causal light cone of your last toggle: every cell whose value could depend on it under this rule. While it is on, each toggle is compared with the history just before it, and in 1D hovering previews the next one. ◐ Damage colours the cells that actually changed (red: on now, off in the reference; blue: the reverse). Their front moves at the butterfly speed, which can be slower than the light cone. The two switch independently.</li>
+      <li><b>Unfolding.</b> In 1D, an edit does not appear everywhere at once: the new history spreads outwards from the edited row at the play speed, so you can follow its consequences into the future and the past.</li>
+      <li><b>Recurrence.</b> The board is finite, so every orbit is periodic. Small boards and linear rules come back quickly.</li>
+    </ul>
+    <h3>Keys</h3>
+    <table class="keys">
+      <tr><td>Space</td><td>play / pause</td><td>Shift+Space</td><td>play backwards</td></tr>
+      <tr><td>→ ←</td><td>step ±1</td><td>Shift + → ←</td><td>step ±10</td></tr>
+      <tr><td>Home</td><td>jump to t = 0</td><td>Z</td><td>run to t = 0 fast</td></tr>
+      <tr><td>R</td><td>reverse direction</td><td>L</td><td>light cone</td></tr>
+      <tr><td>P / X</td><td>pin / clear reference</td><td>D</td><td>damage colours</td></tr>
+      <tr><td>A</td><td>time-average view (2D)</td><td>[ / ]</td><td>slower / faster</td></tr>
+      <tr><td>1 / 2</td><td>1D / 2D</td><td>wheel</td><td>scroll time</td></tr>
+    </table>
+  </div>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script defer src="js/rules.js"></script>
+<script defer src="js/history.js"></script>
+<script defer src="js/measures.js"></script>
+<script defer src="js/patterns.js"></script>
+<script defer src="js/app.js"></script>
+</body>
+</html>
