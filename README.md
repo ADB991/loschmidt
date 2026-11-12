@@ -1,5 +1,7 @@
 # Loschmidt
 
+**Try it in the browser: [adb991.github.io/loschmidt](https://adb991.github.io/loschmidt/)**
+
 ![Rule 214R from a low-entropy seed: disorder grows into both the future and the past. Right: a smiley scrambled by Critters, one cell flipped, then rewound, after a short and a long scramble.](thumbnail.png)
 
 An explorer for **reversible binary cellular automata** in one and two dimensions, built to look at thermalisation, typicality, ergodicity and recurrence in systems whose microscopic dynamics is exactly invertible.
